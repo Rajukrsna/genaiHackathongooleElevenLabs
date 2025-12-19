@@ -30,15 +30,23 @@ function App() {
 
         {/* 404 - Not Found */}
         <Route>
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="text-center">
-              <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>
-              <p className="text-xl text-gray-600 mb-8">Page not found</p>
+          <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+            <div className="text-center max-w-md">
+              <div className="w-24 h-24 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-8">
+                <span className="text-4xl">🔍</span>
+              </div>
+              <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+                404
+              </h1>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Page Not Found</h2>
+              <p className="text-gray-600 mb-8 leading-relaxed">
+                The page you're looking for doesn't exist or has been moved.
+              </p>
               <a
                 href="/"
-                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                className="btn-primary inline-block"
               >
-                Go Home
+                Return Home
               </a>
             </div>
           </div>

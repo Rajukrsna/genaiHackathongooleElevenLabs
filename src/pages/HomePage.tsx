@@ -1,94 +1,154 @@
 import { SignInButton, SignUpButton } from '@clerk/clerk-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Welcome to AI Project
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <div className="text-center mb-20">
+          <Badge className="mb-8">
+            <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+            Enterprise-Grade AI Platform
+          </Badge>
+          <h1 className="text-6xl font-bold text-gray-900 mb-6 leading-tight">
+            Transform Your Business with
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> AI Innovation</span>
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            A modern React application with Clerk authentication and a clean API
-            layer for your Python backend services.
+          <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
+            Experience the future of enterprise software with our comprehensive AI platform.
+            Secure authentication, powerful APIs, and seamless integration for modern businesses.
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <SignInButton mode="modal">
-              <button className="px-8 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors shadow-lg">
-                Sign In
-              </button>
+              <Button size="lg" className="w-full sm:w-auto">
+                Get Started Free
+              </Button>
             </SignInButton>
             <SignUpButton mode="modal">
-              <button className="px-8 py-3 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-gray-50 transition-colors shadow-lg border-2 border-indigo-600">
-                Sign Up
-              </button>
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                Learn More
+              </Button>
             </SignUpButton>
           </div>
         </div>
 
         {/* Features Section */}
-        <div className="mt-20 grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-8 mb-20">
           <FeatureCard
-            title="🔐 Secure Authentication"
-            description="Built-in Clerk authentication with protected routes and automatic token management."
+            icon="🔐"
+            title="Enterprise Security"
+            description="Bank-grade authentication with Clerk, ensuring your data remains protected with JWT tokens and role-based access control."
+            gradient="from-green-500 to-emerald-600"
           />
           <FeatureCard
-            title="🚀 Modern API Layer"
-            description="Clean, type-safe API client with automatic token attachment and error handling."
+            icon="⚡"
+            title="High Performance"
+            description="Built with React 18, TypeScript, and optimized APIs for lightning-fast performance and seamless user experiences."
+            gradient="from-blue-500 to-cyan-600"
           />
           <FeatureCard
-            title="⚡ React Query"
-            description="Powerful caching, loading states, and optimistic updates out of the box."
+            icon="🔄"
+            title="Real-time Sync"
+            description="Advanced state management with React Query, providing instant updates and offline-first capabilities."
+            gradient="from-purple-500 to-pink-600"
           />
         </div>
 
+        {/* Stats Section */}
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-8 mb-20 border border-white/20">
+          <div className="grid md:grid-cols-4 gap-8 text-center">
+            <div>
+              <div className="text-4xl font-bold text-gray-900 mb-2">99.9%</div>
+              <div className="text-gray-600 font-medium">Uptime</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-gray-900 mb-2">10ms</div>
+              <div className="text-gray-600 font-medium">Response Time</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-gray-900 mb-2">500+</div>
+              <div className="text-gray-600 font-medium">Enterprises</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold text-gray-900 mb-2">24/7</div>
+              <div className="text-gray-600 font-medium">Support</div>
+            </div>
+          </div>
+        </div>
+
         {/* Tech Stack */}
-        <div className="mt-20 text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8">Built With</h2>
-          <div className="flex flex-wrap justify-center gap-4">
+        <div className="text-center mb-20">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Trusted by Industry Leaders</h2>
+          <p className="text-gray-600 mb-12 max-w-2xl mx-auto">
+            Built with cutting-edge technologies and enterprise-grade architecture
+          </p>
+          <div className="flex flex-wrap justify-center gap-6">
             <TechBadge>React 18</TechBadge>
             <TechBadge>TypeScript</TechBadge>
-            <TechBadge>Vite</TechBadge>
-            <TechBadge>Clerk Auth</TechBadge>
-            <TechBadge>React Query</TechBadge>
-            <TechBadge>Wouter</TechBadge>
+            <TechBadge>Node.js</TechBadge>
+            <TechBadge>PostgreSQL</TechBadge>
+            <TechBadge>AWS</TechBadge>
+            <TechBadge>Docker</TechBadge>
           </div>
         </div>
 
         {/* Getting Started */}
-        <div className="mt-20 bg-white rounded-xl shadow-xl p-8 max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Getting Started
-          </h2>
-          <ol className="list-decimal list-inside space-y-3 text-gray-700">
-            <li>Sign up or sign in with Clerk authentication</li>
-            <li>Explore the Dashboard to see protected routes</li>
-            <li>Check your Profile page with user information</li>
-            <li>Review the API layer in <code className="bg-gray-100 px-2 py-1 rounded">/lib/api</code></li>
-            <li>Connect to your Python backend services</li>
-          </ol>
-        </div>
+        <Card className="max-w-4xl mx-auto">
+          <CardHeader>
+            <CardTitle className="text-2xl">Quick Start Guide</CardTitle>
+            <CardDescription>Get up and running in minutes</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-8">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-4">For Developers</h3>
+                <ol className="list-decimal list-inside space-y-2 text-gray-700">
+                  <li>Clone the repository</li>
+                  <li>Install dependencies with npm</li>
+                  <li>Configure environment variables</li>
+                  <li>Start development server</li>
+                </ol>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-4">For Enterprises</h3>
+                <ol className="list-decimal list-inside space-y-2 text-gray-700">
+                  <li>Contact our sales team</li>
+                  <li>Schedule a demo</li>
+                  <li>Custom deployment options</li>
+                  <li>24/7 enterprise support</li>
+                </ol>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
 
-function FeatureCard({ title, description }: { title: string; description: string }) {
+function FeatureCard({ icon, title, description, gradient }: { icon: string; title: string; description: string; gradient: string }) {
   return (
-    <div className="bg-white rounded-lg p-6 shadow-lg hover:shadow-xl transition-shadow">
-      <h3 className="text-xl font-semibold text-gray-900 mb-3">{title}</h3>
-      <p className="text-gray-600">{description}</p>
-    </div>
+    <Card className="group hover:scale-105 transition-transform duration-300">
+      <CardContent className="text-center pt-6">
+        <div className={`w-16 h-16 bg-gradient-to-r ${gradient} rounded-2xl flex items-center justify-center text-2xl mb-6 mx-auto shadow-lg`}>
+          {icon}
+        </div>
+        <CardTitle className="mb-4">{title}</CardTitle>
+        <CardDescription className="leading-relaxed">{description}</CardDescription>
+      </CardContent>
+    </Card>
   );
 }
 
 function TechBadge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full font-medium">
+    <Badge variant="outline" className="px-6 py-3 text-sm font-semibold">
       {children}
-    </span>
+    </Badge>
   );
 }
