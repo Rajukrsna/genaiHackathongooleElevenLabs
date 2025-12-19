@@ -2,10 +2,14 @@ import { Route, Switch } from 'wouter';
 import { Navbar, ProtectedRoute } from './components';
 import { HomePage, DashboardPage, ProfilePage } from './pages';
 import { useInitializeApiClient } from './lib/api';
+import { useUserSync } from './hooks';
 
 function App() {
   // Initialize API client with Clerk auth token
   useInitializeApiClient();
+
+  // Auto-sync user to database when they sign in
+  useUserSync();
 
   return (
     <div className="min-h-screen bg-gray-50">

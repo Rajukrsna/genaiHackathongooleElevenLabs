@@ -1,5 +1,5 @@
 import { useUser } from '@clerk/clerk-react';
-import { useProfile, useUpdateProfile } from '@/hooks';
+import { useProfile, useUpdateProfile, useDatabaseUser } from '@/hooks';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,14 +10,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 export default function ProfilePage() {
   const { user } = useUser();
   const { data: profile, isLoading } = useProfile();
+  const { data: dbUser, isLoading: dbLoading } = useDatabaseUser();
   const updateProfile = useUpdateProfile();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [bio, setBio] = useState(profile?.bio || '');
 
   const handleSave = async () => {
     if (!user) return;
-    
+
     try {
       await updateProfile.mutateAsync({
         userId: user.id,
@@ -29,7 +30,7 @@ export default function ProfilePage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || dbLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

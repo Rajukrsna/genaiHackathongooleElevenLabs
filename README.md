@@ -329,7 +329,92 @@ Then configure `tailwind.config.js` and update `index.css`.
 5. **Keep components small** and focused
 6. **Organize by feature** when the app grows
 
-## 📦 Build for Production
+## �️ Database Setup (Neon + Drizzle)
+
+This project uses **Neon** (serverless PostgreSQL) with **Drizzle ORM** for database operations. User data is automatically synced from Clerk authentication.
+
+### 1. Set up Neon Database
+
+1. Go to [neon.tech](https://neon.tech) and create a free account
+2. Create a new project
+3. Copy the connection string from your dashboard
+4. Add it to your `.env` file:
+
+```env
+DATABASE_URL=postgresql://username:password@hostname/database?sslmode=require
+```
+
+### 2. Run Database Migrations
+
+```bash
+npm run migrate
+```
+
+This creates the `users` table to store user data synced from Clerk.
+
+### 3. Set up Clerk Webhooks (Optional - for Production)
+
+**Note**: This project uses API-based user sync instead of webhooks for simplicity. Webhooks are optional and mainly useful for production environments where you want real-time sync.
+
+1. Go to your [Clerk Dashboard](https://dashboard.clerk.com)
+2. Navigate to **Webhooks** in the sidebar
+3. Click **Add Endpoint**
+4. Set the URL to: `https://your-domain.com/api/webhooks/clerk`
+   - For local development: `http://localhost:8000/api/webhooks/clerk`
+5. Select these events:
+   - `user.created`
+   - `user.updated`
+   - `user.deleted`
+6. Copy the **Signing Secret** and add it to your `.env`:
+
+```env
+CLERK_WEBHOOK_SECRET=whsec_your_webhook_secret_here
+```
+
+### 4. How User Sync Works (API-Based Approach)
+
+- **User Signs In** → Frontend calls `/api/auth/sync-user`
+- **Server Checks Database** → Looks for existing user by Clerk ID
+- **Creates if New** → Adds user to Neon DB if they don't exist
+- **Returns User Data** → Frontend gets synced user information
+
+### 5. Testing the Webhook
+
+#### Manual Test (Development)
+```bash
+npm run test:sync
+```
+This creates a test user in your database.
+
+#### Real Webhook Test
+1. **Start your server**: `npm run dev`
+2. **Sign up a new user** in your app
+3. **Check server logs** for webhook processing
+4. **Verify database** has the new user
+
+#### User Sync Logs
+Your server will log sync events:
+```
+🔄 Auto-syncing user to database...
+🎉 User user_123 synced to database: { ... }
+```
+
+### Database Schema
+
+```sql
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  clerk_id TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL,
+  first_name TEXT,
+  last_name TEXT,
+  image_url TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+## �📦 Build for Production
 
 ```bash
 npm run build
