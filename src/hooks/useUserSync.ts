@@ -24,11 +24,11 @@ export const useUserSync = () => {
     mutationFn: async () => {
       const response = await apiClient.post('/auth/sync-user', {
         user: {
-          id: user.id,
-          email_addresses: user.emailAddresses,
-          first_name: user.firstName,
-          last_name: user.lastName,
-          image_url: user.imageUrl,
+          id: user!.id,
+          email_addresses: user!.emailAddresses,
+          first_name: user!.firstName,
+          last_name: user!.lastName,
+          image_url: user!.imageUrl,
         }
       });
       return response.data;
