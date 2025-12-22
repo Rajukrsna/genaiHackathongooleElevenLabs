@@ -4,7 +4,7 @@
  */
 
 export const API_CONFIG = {
-  // Base URL for the Python backend
+ 
   // In development, this will be proxied through Vite
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   

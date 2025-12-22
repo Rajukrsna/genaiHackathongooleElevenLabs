@@ -14,10 +14,14 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Switch>
-        {/* Public Route */}
-        <Route path="/" component={HomePage} />
+        {/* Public Route - Now shows CallPage as main page */}
+        <Route path="/">
+          <ProtectedRoute>
+            <CallPage />
+          </ProtectedRoute>
+        </Route>
 
-        {/* Protected Routes */}
+        {/* Other Routes */}
         <Route path="/dashboard">
           <ProtectedRoute>
             <DashboardPage />
@@ -30,9 +34,9 @@ function App() {
           </ProtectedRoute>
         </Route>
 
-        <Route path="/call">
+        <Route path="/home">
           <ProtectedRoute>
-            <CallPage />
+            <HomePage />
           </ProtectedRoute>
         </Route>
 

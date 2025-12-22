@@ -6,10 +6,11 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 
-// Configure CORS to allow requests from local development
+// Configure CORS to allow requests from local development and production
 const allowedOrigins = [
   'http://localhost:5173', // Local development
   'http://localhost:3000', // Alternative port
+  'https://genai-hackathongoole-eleven-labs.vercel.app', // Production frontend
 ];
 
 app.use(cors({
