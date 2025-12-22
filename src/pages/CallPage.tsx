@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
   AppBar,
   CallerID,
@@ -8,7 +8,7 @@ import {
   IncomingCard,
   IntentDetection,
 } from '../components/call';
-import { useAudioRecorder } from '../hooks/useAudioRecorder';
+import { useContinuousRecorder } from '../hooks/useContinuousRecorder';
 import * as callService from '../lib/api/callService';
 import { useToast } from '../hooks/use-toast';
 
@@ -21,26 +21,106 @@ interface Message {
 
 export default function CallPage() {
   const [callStatus, setCallStatus] = useState<'incoming' | 'active' | 'ended'>('incoming');
-  const [isListening, setIsListening] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [conversationContext, setConversationContext] = useState<string>('');
   
-  const { startRecording, stopRecording, error: recordingError } = useAudioRecorder();
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isPlayingResponseRef = useRef(false);
 
-  const handleAcceptCall = () => {
+  // Process audio when silence is detected
+  const handleSilenceDetected = useCallback(async (audioBlob: Blob) => {
+    // Don't process if we're currently playing a response
+    if (isPlayingResponseRef.current) {
+      console.log('⏸️ Skipping processing - response is playing');
+      return;
+    }
+
+    if (audioBlob.size < 1000) {
+      console.log('⏸️ Audio too short, skipping...');
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      console.log('📤 Processing audio blob, size:', audioBlob.size);
+
+      // Convert speech to text
+      const transcribedText = await callService.speechToText(audioBlob);
+
+      if (!transcribedText || transcribedText.trim() === '') {
+        console.log('⚠️ No speech detected');
+        setIsProcessing(false);
+        return;
+      }
+
+      console.log('✅ Transcribed:', transcribedText);
+
+      // Add incoming message
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text: transcribedText,
+        type: 'incoming',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, newMessage]);
+
+      // Update conversation context
+      setConversationContext((prev) => 
+        prev + `\nCaller: ${transcribedText}`
+      );
+
+      // Process with AI to get reply suggestions
+      const replies = await callService.processIntent(transcribedText, conversationContext);
+      setSuggestions(replies);
+
+      toast({
+        title: 'Replies ready!',
+        description: 'Select a reply option',
+      });
+    } catch (error) {
+      console.error('Error processing speech:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to process speech',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [conversationContext, toast]);
+
+  const handleSpeechDetected = useCallback(() => {
+    console.log('👂 Caller is speaking...');
+  }, []);
+
+  // Continuous recorder with VAD
+  const { isActive, isSpeaking, startListening, stopListening, pauseDetection, resumeDetection, error: recordingError } =
+    useContinuousRecorder({
+      onSpeechDetected: handleSpeechDetected,
+      onSilenceDetected: handleSilenceDetected,
+      silenceDuration: 1500,
+      voiceThreshold: 25,
+    });
+
+  const handleAcceptCall = async () => {
     setCallStatus('active');
-    setIsListening(false);
+    
+    // Auto-start continuous listening
+    await startListening();
+    
     toast({
-      title: "Call connected",
-      description: "Click 'Start Listening' to begin recording caller's speech",
+      title: 'Call connected',
+      description: 'Listening for caller speech automatically',
     });
   };
 
   const handleRejectCall = () => {
+    stopListening();
     setCallStatus('ended');
     toast({
       title: "Call ended",
@@ -56,71 +136,6 @@ export default function CallPage() {
     setIsMuted(!isMuted);
   };
 
-  const handlePause = async () => {
-    if (!isListening) {
-      // Start listening (recording)
-      setIsListening(true);
-      await startRecording();
-      toast({
-        title: "Listening...",
-        description: "Recording caller's speech. Click again to stop and process.",
-      });
-    } else {
-      // Stop listening and process
-      setIsListening(false);
-      setIsProcessing(true);
-      
-      try {
-        // Stop recording and get audio blob
-        const audioBlob = await stopRecording();
-        
-        if (!audioBlob) {
-          throw new Error('No audio recorded');
-        }
-
-        toast({
-          title: "Processing speech...",
-          description: "Converting speech to text and generating replies",
-        });
-
-        // Convert speech to text
-        const transcribedText = await callService.speechToText(audioBlob);
-        
-        if (!transcribedText || transcribedText.trim() === '') {
-          throw new Error('No speech detected');
-        }
-
-        // Add incoming message
-        const newMessage: Message = {
-          id: Date.now().toString(),
-          text: transcribedText,
-          type: 'incoming',
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, newMessage]);
-
-        // Process with AI to get reply suggestions
-        const replies = await callService.processIntent(transcribedText);
-        setSuggestions(replies);
-
-        toast({
-          title: "Replies ready!",
-          description: "Select a reply option below",
-        });
-
-      } catch (error) {
-        console.error('Error processing speech:', error);
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : 'Failed to process speech',
-          variant: "destructive",
-        });
-      } finally {
-        setIsProcessing(false);
-      }
-    }
-  };
-
   const handleSendMessage = async (text: string) => {
     const newMessage: Message = {
       id: Date.now().toString(),
@@ -130,7 +145,15 @@ export default function CallPage() {
     };
     setMessages(prev => [...prev, newMessage]);
 
+    // Update conversation context
+    setConversationContext((prev) => 
+      prev + `\nYou: ${text}`
+    );
+
     try {
+      isPlayingResponseRef.current = true;
+      pauseDetection(); // Pause VAD while playing response
+
       // Convert text to speech
       const audioDataUrl = await callService.textToSpeech(text);
       
@@ -143,6 +166,18 @@ export default function CallPage() {
           title: "Response sent",
           description: "Playing your reply to the caller",
         });
+
+        // Wait for audio to finish
+        await new Promise<void>((resolve) => {
+          if (audioRef.current) {
+            audioRef.current.onended = () => resolve();
+          } else {
+            resolve();
+          }
+        });
+        
+        // Add a small delay after audio ends to avoid picking up tail end
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     } catch (error) {
       console.error('Error converting to speech:', error);
@@ -151,6 +186,9 @@ export default function CallPage() {
         description: 'Failed to play audio response',
         variant: "destructive",
       });
+    } finally {
+      isPlayingResponseRef.current = false;
+      resumeDetection(); // Resume VAD after response is done
     }
   };
 
@@ -176,7 +214,7 @@ export default function CallPage() {
       });
 
       // Process with AI again
-      const replies = await callService.processIntent(lastIncomingMessage.text);
+      const replies = await callService.processIntent(lastIncomingMessage.text, conversationContext);
       setSuggestions(replies);
 
       toast({
@@ -211,7 +249,31 @@ export default function CallPage() {
       {/* App Bar and Listening Indicator */}
       <div className="flex flex-col items-start w-full">
         <AppBar />
-        <ListeningIndicator isListening={callStatus === 'active' && isListening} />
+        <ListeningIndicator isListening={isActive} />
+        
+        {/* Voice Activity Status */}
+        {isActive && (
+          <div className="w-full px-4 py-2">
+            <div className="flex items-center gap-2">
+              {isSpeaking ? (
+                <>
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-green-400 text-base">Caller speaking...</span>
+                </>
+              ) : isProcessing ? (
+                <>
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                  <span className="text-yellow-400 text-base">Processing...</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-blue-400 text-base">Listening...</span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Messages Area */}
@@ -239,14 +301,7 @@ export default function CallPage() {
       </div>
 
       {/* Bottom Controls */}
-      <div className="sticky bottom-0 left-0 right-0 p-2.5 space-y-2">
-        <div className="flex items-center gap-2">
-          <PauseButton 
-            onPause={handlePause} 
-            isListening={isListening}
-            isProcessing={isProcessing}
-          />
-        </div>
+      <div className="sticky bottom-0 left-0 right-0 p-2.5 space-y-2 bg-[#0b1220]">
         <TextInputBox
           onSend={handleSendMessage}
           placeholder="Type message..."
@@ -258,18 +313,18 @@ export default function CallPage() {
 
       {/* Error display */}
       {recordingError && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg">
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg z-50">
           {recordingError}
         </div>
       )}
 
-      {/* Instructions when call is active but not started */}
-      {callStatus === 'active' && messages.length === 0 && !isListening && !isProcessing && (
+      {/* Instructions when call is active but no messages yet
+      {callStatus === 'active' && messages.length === 0 && !isSpeaking && !isProcessing && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-600/20 border-2 border-blue-600 text-white px-6 py-4 rounded-lg text-center max-w-xs">
-          <p className="text-lg font-semibold mb-2">Ready to assist</p>
-          <p className="text-sm">Click the "Start Listening" button below to record the caller's speech</p>
+          <p className="text-lg font-semibold mb-2">🎧 Auto-Listening Active</p>
+          <p className="text-sm">Speak now - the system will automatically detect your speech and process it</p>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

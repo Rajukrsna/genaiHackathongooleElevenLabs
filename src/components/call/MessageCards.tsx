@@ -29,7 +29,7 @@ interface OutgoingCardProps {
 export function OutgoingCard({ message, isSecondary = false }: OutgoingCardProps) {
   return (
     <div className="bg-[#111827] flex items-center justify-center px-4 py-3 rounded-[13px] w-full">
-      <p className={`text-base whitespace-pre-wrap ${isSecondary ? 'text-[#9ca3af]' : 'text-white'}`}>
+      <p className={`text-lg whitespace-pre-wrap ${isSecondary ? 'text-[#9ca3af]' : 'text-white'}`}>
         {message}
       </p>
     </div>

@@ -79,21 +79,34 @@ export async function speechToText(req: Request, res: Response) {
  */
 export async function processIntent(req: Request, res: Response) {
   try {
-    const { text } = req.body;
+    const { text, conversationContext } = req.body;
 
     if (!text) {
       return res.status(400).json({ error: 'No text provided' });
     }
 
+    console.log('🤖 Processing intent for:', text);
+    if (conversationContext) {
+      console.log('📝 Conversation context:', conversationContext);
+    }
+
     // Initialize Gemini model
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-    // Create a prompt for intent detection and reply generation
+    // Create a prompt with conversation context for better replies
+    const contextPrompt = conversationContext 
+      ? `Previous conversation:\n${conversationContext}\n\n` 
+      : '';
+
     const prompt = `You are helping a non-verbal person communicate during a phone call. 
-The caller just said: "${text}"
+${contextPrompt}The caller just said: "${text}"
 
 Analyze the intent and provide 3-4 short, appropriate reply options (each 5-15 words max) that a non-verbal person could use to respond. 
-The replies should be natural, polite, and contextually appropriate.
+The replies should be:
+- Natural and conversational
+- Polite and professional
+- Contextually appropriate to the conversation
+- Varied in tone (accepting, questioning, declining, neutral)
 
 Format your response as a JSON array of strings, for example:
 ["Yes, I understand", "Could you please repeat that?", "I need a moment to think", "No, that doesn't work for me"]
@@ -103,6 +116,8 @@ Only output the JSON array, nothing else.`;
     const result = await model.generateContent(prompt);
     const response = result.response;
     const responseText = response.text();
+
+    console.log('🎯 AI Response:', responseText);
 
     // Parse the JSON response
     let replies: string[] = [];
@@ -139,6 +154,8 @@ Only output the JSON array, nothing else.`;
         ...replies
       ].slice(0, 4);
     }
+
+    console.log('✅ Generated replies:', replies);
 
     res.json({ 
       originalText: text,

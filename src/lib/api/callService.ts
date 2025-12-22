@@ -15,10 +15,10 @@ export async function speechToText(audioBlob: Blob): Promise<string> {
 /**
  * Process text with AI to get reply options
  */
-export async function processIntent(text: string): Promise<string[]> {
+export async function processIntent(text: string, conversationContext?: string): Promise<string[]> {
   const response = await apiClient.post<{ originalText: string; replies: string[] }>(
     '/call/process-intent',
-    { text }
+    { text, conversationContext }
   );
 
   return response.data?.replies || [];

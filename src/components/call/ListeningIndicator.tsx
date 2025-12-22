@@ -23,12 +23,7 @@ export function ListeningIndicator({ isListening = true, label = true }: Listeni
         )}
       </div>
       
-      {/* Label */}
-      {label && (
-        <p className="text-[#9ca3af] text-base">
-          {isListening ? 'Listening.....' : 'Not listening'}
-        </p>
-      )}
+    
     </div>
   );
 }
