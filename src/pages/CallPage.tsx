@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   AppBar,
   CallerID,
@@ -8,6 +8,9 @@ import {
   IncomingCard,
   IntentDetection,
 } from '../components/call';
+import { useAudioRecorder } from '../hooks/useAudioRecorder';
+import * as callService from '../lib/api/callService';
+import { useToast } from '../hooks/use-toast';
 
 interface Message {
   id: string;
@@ -22,64 +25,174 @@ export default function CallPage() {
   const [isMuted, setIsMuted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  const { startRecording, stopRecording, error: recordingError } = useAudioRecorder();
+  const { toast } = useToast();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const handleAcceptCall = () => {
     setCallStatus('active');
-    setIsListening(true);
-    // TODO: Start call handling logic
+    setIsListening(false);
+    toast({
+      title: "Call connected",
+      description: "Click 'Start Listening' to begin recording caller's speech",
+    });
   };
 
   const handleRejectCall = () => {
     setCallStatus('ended');
-    // TODO: End call logic and redirect
+    toast({
+      title: "Call ended",
+      description: "Redirecting...",
+    });
+    // Redirect after 1 second
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 1000);
   };
 
   const handleToggleMute = () => {
     setIsMuted(!isMuted);
-    // TODO: Implement mute/unmute logic
   };
 
-  const handlePause = () => {
-    setIsListening(!isListening);
-    // TODO: Implement pause/resume listening
+  const handlePause = async () => {
+    if (!isListening) {
+      // Start listening (recording)
+      setIsListening(true);
+      await startRecording();
+      toast({
+        title: "Listening...",
+        description: "Recording caller's speech. Click again to stop and process.",
+      });
+    } else {
+      // Stop listening and process
+      setIsListening(false);
+      setIsProcessing(true);
+      
+      try {
+        // Stop recording and get audio blob
+        const audioBlob = await stopRecording();
+        
+        if (!audioBlob) {
+          throw new Error('No audio recorded');
+        }
+
+        toast({
+          title: "Processing speech...",
+          description: "Converting speech to text and generating replies",
+        });
+
+        // Convert speech to text
+        const transcribedText = await callService.speechToText(audioBlob);
+        
+        if (!transcribedText || transcribedText.trim() === '') {
+          throw new Error('No speech detected');
+        }
+
+        // Add incoming message
+        const newMessage: Message = {
+          id: Date.now().toString(),
+          text: transcribedText,
+          type: 'incoming',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, newMessage]);
+
+        // Process with AI to get reply suggestions
+        const replies = await callService.processIntent(transcribedText);
+        setSuggestions(replies);
+
+        toast({
+          title: "Replies ready!",
+          description: "Select a reply option below",
+        });
+
+      } catch (error) {
+        console.error('Error processing speech:', error);
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : 'Failed to process speech',
+          variant: "destructive",
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    }
   };
 
-  const handleSendMessage = (text: string) => {
+  const handleSendMessage = async (text: string) => {
     const newMessage: Message = {
       id: Date.now().toString(),
       text,
       type: 'outgoing',
       timestamp: new Date(),
     };
-    setMessages([...messages, newMessage]);
-    // TODO: Send message to backend for text-to-speech
+    setMessages(prev => [...prev, newMessage]);
+
+    try {
+      // Convert text to speech
+      const audioDataUrl = await callService.textToSpeech(text);
+      
+      // Play the audio
+      if (audioRef.current) {
+        audioRef.current.src = audioDataUrl;
+        await audioRef.current.play();
+        
+        toast({
+          title: "Response sent",
+          description: "Playing your reply to the caller",
+        });
+      }
+    } catch (error) {
+      console.error('Error converting to speech:', error);
+      toast({
+        title: "Error",
+        description: 'Failed to play audio response',
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleSelectReply = (reply: string) => {
-    handleSendMessage(reply);
+  const handleSelectReply = async (reply: string) => {
     setSuggestions([]); // Clear suggestions after selection
-    // TODO: Convert to speech and play
+    await handleSendMessage(reply);
   };
 
-  const handleRegenerate = () => {
-    // TODO: Request new suggestions from backend
-  };
+  const handleRegenerate = async () => {
+    if (messages.length === 0) return;
 
-  // Simulate incoming message (replace with real WebSocket/API call)
-  const simulateIncomingMessage = (text: string) => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text,
-      type: 'incoming',
-      timestamp: new Date(),
-    };
-    setMessages([...messages, newMessage]);
+    // Get the last incoming message
+    const lastIncomingMessage = [...messages].reverse().find(m => m.type === 'incoming');
     
-    // Simulate intent detection with suggestions
-    setSuggestions([
-      'Enim nihil consequuntur alias eveniet commodi quisquam nulla est.',
-      'Enim nihil consequuntur alias eveniet commodi quisquam nulla est.',
-    ]);
+    if (!lastIncomingMessage) return;
+
+    setIsProcessing(true);
+    
+    try {
+      toast({
+        title: "Regenerating replies...",
+        description: "Getting new response options",
+      });
+
+      // Process with AI again
+      const replies = await callService.processIntent(lastIncomingMessage.text);
+      setSuggestions(replies);
+
+      toast({
+        title: "New replies ready!",
+        description: "Select a reply option below",
+      });
+    } catch (error) {
+      console.error('Error regenerating replies:', error);
+      toast({
+        title: "Error",
+        description: 'Failed to regenerate replies',
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -128,7 +241,11 @@ export default function CallPage() {
       {/* Bottom Controls */}
       <div className="sticky bottom-0 left-0 right-0 p-2.5 space-y-2">
         <div className="flex items-center gap-2">
-          <PauseButton onPause={handlePause} />
+          <PauseButton 
+            onPause={handlePause} 
+            isListening={isListening}
+            isProcessing={isProcessing}
+          />
         </div>
         <TextInputBox
           onSend={handleSendMessage}
@@ -136,14 +253,22 @@ export default function CallPage() {
         />
       </div>
 
-      {/* Dev Button to simulate incoming message */}
-      {callStatus === 'active' && messages.length === 0 && (
-        <button
-          onClick={() => simulateIncomingMessage('Iste sit soluta explicabo.\nSit placeat iusto id alias occaecati iste.\nQui provident quam deleniti facilis dolore ut quod ut.')}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-600 text-white px-6 py-3 rounded-lg"
-        >
-          Simulate Customer Speech
-        </button>
+      {/* Hidden audio element for TTS playback */}
+      <audio ref={audioRef} className="hidden" />
+
+      {/* Error display */}
+      {recordingError && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg">
+          {recordingError}
+        </div>
+      )}
+
+      {/* Instructions when call is active but not started */}
+      {callStatus === 'active' && messages.length === 0 && !isListening && !isProcessing && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-600/20 border-2 border-blue-600 text-white px-6 py-4 rounded-lg text-center max-w-xs">
+          <p className="text-lg font-semibold mb-2">Ready to assist</p>
+          <p className="text-sm">Click the "Start Listening" button below to record the caller's speech</p>
+        </div>
       )}
     </div>
   );

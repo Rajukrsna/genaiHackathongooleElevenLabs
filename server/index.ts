@@ -26,8 +26,15 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Skip JSON parsing for multipart/form-data routes (audio uploads)
+app.use((req, res, next) => {
+  if (req.path === '/api/call/speech-to-text') {
+    return next(); // Skip JSON parsing for file uploads
+  }
+  express.json({ limit: '50mb' })(req, res, next);
+});
+
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();

@@ -1,5 +1,5 @@
 import { useAuth } from '@clerk/clerk-react';
-import type { ApiResponse, ApiError } from '@/types';
+import type { ApiResponse } from '@/types';
 import { API_CONFIG } from './config';
 
 /**
@@ -45,11 +45,19 @@ class ApiClient {
       // Get auth token from Clerk
       const token = this.getToken ? await this.getToken() : null;
 
+      // Check if body is FormData (don't set Content-Type for FormData)
+      const isFormData = options.body instanceof FormData;
+
       // Build headers as a plain object to allow string indexing
-      const headers: Record<string, string> = {
-        ...(API_CONFIG.headers as Record<string, string>),
-        ...(options.headers as Record<string, string>),
-      };
+      const headers: Record<string, string> = {};
+      
+      // Only add default headers if not FormData
+      if (!isFormData) {
+        Object.assign(headers, API_CONFIG.headers as Record<string, string>);
+      }
+      
+      // Add custom headers from options
+      Object.assign(headers, options.headers as Record<string, string>);
 
       // Add auth token if available
       if (token) {
@@ -108,10 +116,18 @@ class ApiClient {
   /**
    * POST request
    */
-  async post<T = any>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
+  async post<T = any>(endpoint: string, body?: any, options?: RequestInit): Promise<ApiResponse<T>> {
+    const isFormData = body instanceof FormData;
+    
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
+      ...options,
+      headers: {
+        // Don't set Content-Type for FormData - browser sets it with boundary
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        ...(options?.headers || {}),
+      },
     });
   }
 

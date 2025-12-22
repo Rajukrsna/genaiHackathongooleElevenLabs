@@ -1,5 +1,10 @@
 /// <reference path="./types.d.ts" />
 import { Express } from "express";
+import multer from "multer";
+import * as aiController from "./controllers/aiController";
+
+// Configure multer for file uploads
+const upload = multer({ dest: 'uploads/' });
 
 export async function registerRoutes(app: Express) {
   // Register API routes here
@@ -65,6 +70,17 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+
+  // AI Call Assistant Routes
+  
+  // Speech-to-text endpoint
+  app.post("/api/call/speech-to-text", upload.single('audio'), aiController.speechToText);
+
+  // Intent detection and reply generation
+  app.post("/api/call/process-intent", aiController.processIntent);
+
+  // Text-to-speech endpoint
+  app.post("/api/call/text-to-speech", aiController.textToSpeech);
 
   // Add more routes as needed
 

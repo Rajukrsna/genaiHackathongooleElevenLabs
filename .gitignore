@@ -40,6 +40,12 @@ ENV/
 .env
 .env.local
 
+# Uploads (temporary audio files)
+uploads/
+*.webm
+*.mp3
+*.wav
+
 # AI/ML specific
 *.h5
 *.pkl
