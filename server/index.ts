@@ -83,9 +83,11 @@ app.use((req, res, next) => {
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
     await setupVite(app, server);
-  } else {
-    serveStatic(app);
   }
+  // Note: serveStatic is disabled for separate backend deployment
+  // else {
+  //   serveStatic(app);
+  // }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.
