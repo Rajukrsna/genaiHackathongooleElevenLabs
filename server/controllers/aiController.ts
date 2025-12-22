@@ -15,30 +15,47 @@ const elevenLabs = new ElevenLabsClient({
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
+console.log('🚀 AI Controller initialized');
+console.log('🔑 ElevenLabs API Key present:', !!process.env.ELEVENLABS_API_KEY);
+console.log('🔑 Gemini API Key present:', !!process.env.GEMINI_API_KEY);
+
 /**
  * Convert speech to text using Eleven Labs
  */
 export async function speechToText(req: Request, res: Response) {
+  console.log('🎤 [STT] Starting speech-to-text conversion');
+
   try {
     const multerReq = req as MulterRequest;
-    
-    console.log('📥 Received request:', {
+
+    console.log('📥 [STT] Received request:', {
       contentType: req.headers['content-type'],
       hasFile: !!multerReq.file,
       bodyKeys: Object.keys(req.body || {}),
+      fileDetails: multerReq.file ? {
+        originalname: multerReq.file.originalname,
+        mimetype: multerReq.file.mimetype,
+        size: multerReq.file.size,
+        path: multerReq.file.path
+      } : null
     });
-    
+
     if (!multerReq.file) {
+      console.log('❌ [STT] No audio file provided');
       return res.status(400).json({ error: 'No audio file provided' });
     }
 
+    console.log('📂 [STT] Reading audio file from:', multerReq.file.path);
+
     // Read audio file as buffer
     const audioBuffer = fs.readFileSync(multerReq.file.path);
+    console.log('📊 [STT] Audio buffer size:', audioBuffer.length, 'bytes');
 
     // Create Blob from buffer
     const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: 'audio/webm' });
+    console.log('📦 [STT] Created audio blob, size:', audioBlob.size, 'bytes');
 
-    console.log('🎤 Converting speech to text...');
+    console.log('🔄 [STT] Calling ElevenLabs API...');
 
     // Use Eleven Labs SDK for STT
     const transcription = await elevenLabs.speechToText.convert({
@@ -47,27 +64,37 @@ export async function speechToText(req: Request, res: Response) {
       languageCode: 'eng',
     });
 
-    console.log('✅ Transcription:', transcription);
+    console.log('✅ [STT] ElevenLabs API response received');
+    console.log('📝 [STT] Raw transcription object:', transcription);
 
     // Clean up uploaded file
     fs.unlinkSync(multerReq.file.path);
+    console.log('🧹 [STT] Cleaned up uploaded file');
 
     // Extract just the text from the transcription object
     const transcribedText = transcription.text || '';
-    console.log('📝 Extracted text:', transcribedText);
+    console.log('📝 [STT] Extracted text:', `"${transcribedText}"`);
+    console.log('✅ [STT] Speech-to-text conversion completed successfully');
 
     res.json({ text: transcribedText });
   } catch (error) {
-    console.error('Speech-to-text error:', error);
-    
+    console.error('❌ [STT] Speech-to-text error:', error);
+
     const multerReq = req as MulterRequest;
-    
+
     // Clean up uploaded file on error
     if (multerReq.file && fs.existsSync(multerReq.file.path)) {
+      console.log('🧹 [STT] Cleaning up uploaded file after error');
       fs.unlinkSync(multerReq.file.path);
     }
 
-    res.status(500).json({ 
+    console.error('❌ [STT] Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    });
+
+    res.status(500).json({
       error: 'Failed to convert speech to text',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -78,17 +105,18 @@ export async function speechToText(req: Request, res: Response) {
  * Process text with Gemini AI to detect intent and generate reply options
  */
 export async function processIntent(req: Request, res: Response) {
+  console.log('🤖 [INTENT] Starting intent processing');
+
   try {
     const { text, conversationContext } = req.body;
+    console.log('📥 [INTENT] Received request:', { text, hasContext: !!conversationContext });
 
     if (!text) {
+      console.log('❌ [INTENT] No text provided');
       return res.status(400).json({ error: 'No text provided' });
     }
 
-    console.log('🤖 Processing intent for:', text);
-    if (conversationContext) {
-      console.log('📝 Conversation context:', conversationContext);
-    }
+    console.log('🔄 [INTENT] Calling Gemini API...');
 
     // Initialize Gemini model
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
@@ -174,14 +202,18 @@ Only output the JSON array, nothing else.`;
  * Convert text to speech using Eleven Labs
  */
 export async function textToSpeech(req: Request, res: Response) {
+  console.log('🔊 [TTS] Starting text-to-speech conversion');
+
   try {
     const { text } = req.body;
+    console.log('📥 [TTS] Received request:', { text: text ? `"${text.substring(0, 50)}..."` : null });
 
     if (!text) {
+      console.log('❌ [TTS] No text provided');
       return res.status(400).json({ error: 'No text provided' });
     }
 
-    console.log('🔊 Converting text to speech:', text);
+    console.log('🔄 [TTS] Calling ElevenLabs TTS API...');
 
     // Use Eleven Labs TTS with updated API and free tier model
     const audio = await elevenLabs.textToSpeech.convert(
@@ -192,6 +224,8 @@ export async function textToSpeech(req: Request, res: Response) {
         outputFormat: 'mp3_44100_128',
       }
     );
+
+    console.log('✅ [TTS] ElevenLabs TTS API response received');
 
     // Convert stream to buffer
     const reader = audio.getReader();
