@@ -348,20 +348,11 @@ export default function CallPage() {
         <ListeningIndicator isListening={!isPaused && callStatus !== 'ended'} />
         
         {/* Voice Activity Status */}
-        {isActive && (isSpeaking || isProcessing) && (
+        {isActive && isSpeaking && (
           <div className="w-full px-4 py-2">
             <div className="flex items-center gap-2">
-              {isSpeaking ? (
-                <>
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-green-400 text-base">Caller speaking...</span>
-                </>
-              ) : (
-                <>
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                  <span className="text-yellow-400 text-base">Processing...</span>
-                </>
-              )}
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-green-400 text-base">Caller speaking...</span>
             </div>
           </div>
         )}
@@ -402,8 +393,31 @@ export default function CallPage() {
           );
         })}
 
+        {/* Detecting Intent Card */}
+        {isProcessing && (
+          <div
+            className="w-full flex items-center justify-start"
+            style={{
+              fontFamily: 'Segoe UI',
+              fontWeight: 400,
+              fontSize: '16px',
+              lineHeight: '100%',
+              letterSpacing: '0%',
+              width: '391px',
+              height: '57px',
+              borderRadius: '13px',
+              gap: '8px',
+              padding: '12px 16px',
+              background: '#1f2937',
+              color: '#9CA3AF'
+            }}
+          >
+            Detecting intent...
+          </div>
+        )}
+
         {/* Intent Detection with Suggestions */}
-        {suggestionState.suggestions.length > 0 && (
+        {!isProcessing && suggestionState.suggestions.length > 0 && (
           <IntentDetection
             suggestions={suggestionState.suggestions}
             onSelectReply={handleSelectReply}
