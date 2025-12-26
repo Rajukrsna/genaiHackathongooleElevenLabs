@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Pause, Play } from 'lucide-react';
 import {
   AppBar,
@@ -45,6 +45,12 @@ export default function CallPage() {
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isPlayingResponseRef = useRef(false);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isProcessing, suggestionState.suggestions]);
 
   // Process audio when silence is detected
   const handleSilenceDetected = useCallback(async (audioBlob: Blob) => {
@@ -427,6 +433,9 @@ export default function CallPage() {
           />
         )}
       </div>
+      
+      {/* Invisible element to scroll to */}
+      <div ref={messagesEndRef} />
 
       {/* Floating Pause/Play Button */}
       <button
