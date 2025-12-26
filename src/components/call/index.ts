@@ -1,4 +1,4 @@
-import { StatusBar } from './StatusBar';
+import { SendIcon } from './SendIcon';
 import { AppBar } from './AppBar';
 import { CallerID } from './CallerID';
 import { ListeningIndicator } from './ListeningIndicator';
@@ -8,7 +8,7 @@ import { IncomingCard, OutgoingCard, IntroMessage } from './MessageCards';
 import { IntentDetection } from './IntentDetection';
 
 export {
-  StatusBar,
+  SendIcon,
   AppBar,
   CallerID,
   ListeningIndicator,

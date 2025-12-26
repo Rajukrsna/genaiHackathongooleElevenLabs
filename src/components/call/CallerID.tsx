@@ -1,4 +1,4 @@
-import { Phone, PhoneOff } from 'lucide-react';
+import { Phone, PhoneOff, Volume2, VolumeX } from 'lucide-react';
 
 interface CallerIDProps {
   callerName?: string;
@@ -59,15 +59,19 @@ export function CallerID({
           </>
         ) : (
           <>
-            {/* Mute/Unmute Button */}
+            {/* Mute/Unmute Button - Speaker Icon */}
             <button 
               onClick={onToggleMute}
               className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                isMuted ? 'bg-gray-500' : 'bg-gray-600'
+                isMuted ? 'bg-gray-500 hover:bg-gray-600' : 'bg-gray-600 hover:bg-gray-700'
               }`}
               aria-label={isMuted ? 'Unmute' : 'Mute'}
             >
-              <Phone className="w-6 h-6 text-white" />
+              {isMuted ? (
+                <VolumeX className="w-6 h-6 text-white" />
+              ) : (
+                <Volume2 className="w-6 h-6 text-white" />
+              )}
             </button>
             {/* End Call Button */}
             <button 

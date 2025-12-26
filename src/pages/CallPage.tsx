@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { Pause, Play } from 'lucide-react';
 import {
   AppBar,
   CallerID,
@@ -30,6 +31,7 @@ interface SuggestionState {
 export default function CallPage() {
   const [callStatus, setCallStatus] = useState<'incoming' | 'active' | 'ended'>('incoming');
   const [isMuted, setIsMuted] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [suggestionState, setSuggestionState] = useState<SuggestionState>({
     suggestions: [],
@@ -168,6 +170,24 @@ export default function CallPage() {
 
   const handleToggleMute = () => {
     setIsMuted(!isMuted);
+  };
+
+  const handlePause = () => {
+    if (isPaused) {
+      resumeDetection();
+      setIsPaused(false);
+      toast({
+        title: 'Listening resumed',
+        description: 'The system is now listening for speech',
+      });
+    } else {
+      pauseDetection();
+      setIsPaused(true);
+      toast({
+        title: 'Listening paused',
+        description: 'The system has stopped listening',
+      });
+    }
   };
 
   const handleSendMessage = async (text: string) => {
@@ -325,10 +345,10 @@ export default function CallPage() {
       {/* App Bar and Listening Indicator */}
       <div className="flex flex-col items-start w-full">
         <AppBar />
-        <ListeningIndicator isListening={isActive} />
+        <ListeningIndicator isListening={!isPaused && callStatus !== 'ended'} />
         
         {/* Voice Activity Status */}
-        {isActive && (
+        {isActive && (isSpeaking || isProcessing) && (
           <div className="w-full px-4 py-2">
             <div className="flex items-center gap-2">
               {isSpeaking ? (
@@ -336,15 +356,10 @@ export default function CallPage() {
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   <span className="text-green-400 text-base">Caller speaking...</span>
                 </>
-              ) : isProcessing ? (
+              ) : (
                 <>
                   <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
                   <span className="text-yellow-400 text-base">Processing...</span>
-                </>
-              ) : (
-                <>
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-blue-400 text-base">Listening...</span>
                 </>
               )}
             </div>
@@ -398,6 +413,29 @@ export default function CallPage() {
           />
         )}
       </div>
+
+      {/* Floating Pause/Play Button */}
+      <button
+        onClick={handlePause}
+        disabled={isProcessing}
+        className="absolute z-10 flex items-center justify-center disabled:opacity-50 transition-colors"
+        style={{
+          bottom: '80px',
+          left: '10px',
+          width: '40px',
+          height: '40px',
+          borderRadius: '13px',
+          padding: '8px',
+          background: '#111827'
+        }}
+        aria-label={isPaused ? "Resume Listening" : "Pause Listening"}
+      >
+        {isPaused ? (
+          <Play className="w-5 h-5 text-[#3B82F6]" />
+        ) : (
+          <Pause className="w-5 h-5 text-[#3B82F6]" />
+        )}
+      </button>
 
       {/* Bottom Controls */}
       <div className="sticky bottom-0 left-0 right-0 p-2.5 space-y-2 bg-[#0b1220]">
