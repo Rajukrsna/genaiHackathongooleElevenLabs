@@ -119,42 +119,10 @@ function sanitizeContext(raw: any) {
   return clean;
 }
 
-export function validateCallContextMiddleware(rejectInvalid = false) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const raw = (req.body && req.body.conversationContext) ? req.body.conversationContext : null;
-
-    if (!raw) return next();
-
-    const result = validateCallContext(raw);
-    if (result.success) {
-      req.body.conversationContext = result.data;
-      return next();
-    }
-
-    // Validation failed — attempt to sanitize
-    console.warn('⚠️ [CONTEXT] Validation failed, attempting to sanitize');
-    const sanitized = sanitizeContext(raw);
-
-    // Re-validate sanitized
-    const sanitizedResult = validateCallContext(sanitized);
-    if (sanitizedResult.success) {
-      req.body.conversationContext = sanitizedResult.data;
-      console.info('ℹ️ [CONTEXT] Sanitized context accepted');
-      return next();
-    }
-
-    // Still invalid — log helpful debug info to identify mismatched fields (non-PII)
-    console.warn('⚠️ [CONTEXT] Sanitization did not produce a valid context');
-    console.debug('⚠️ [CONTEXT] raw context snapshot:', JSON.stringify(raw, Object.keys(raw || {}).slice(0,50)));
-    console.debug('⚠️ [CONTEXT] sanitized snapshot:', JSON.stringify(sanitized, Object.keys(sanitized || {}).slice(0,50)));
-    console.debug('⚠️ [CONTEXT] zod error details:', sanitizedResult.error.format());
-
-    if (rejectInvalid) {
-      return res.status(400).json({ error: 'Invalid conversationContext' });
-    }
-
-    // Otherwise, attach sanitized (possibly partial) context as best-effort and continue
-    req.body.conversationContext = sanitized || null;
+// Validation/sanitization disabled by request: pass the conversationContext through unchanged
+export function validateCallContextMiddleware(_rejectInvalid = false) {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    // No validation or sanitization: keep client-provided object as-is
     return next();
   };
 }
