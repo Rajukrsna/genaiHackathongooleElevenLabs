@@ -24,10 +24,14 @@ export async function speechToText(audioBlob: Blob): Promise<string> {
  * Process text with AI to get reply options
  */
 export async function processIntent(
-  text: string, 
-  conversationContext?: string,
+  text: string,
+  conversationContext?: any,
   isFirstMessage?: boolean
 ): Promise<ProcessIntentResponse> {
+  // Send structured conversationContext (object) when available
+  // Debug: log payload before sending
+  console.debug('[API] processIntent payload:', { text, conversationContext, isFirstMessage });
+
   const response = await apiClient.post<ProcessIntentResponse>(
     '/call/process-intent',
     { text, conversationContext, isFirstMessage }

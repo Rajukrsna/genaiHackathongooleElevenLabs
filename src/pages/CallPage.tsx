@@ -38,7 +38,47 @@ export default function CallPage() {
     isCommunicationFailure: false,
   });
   const [isProcessing, setIsProcessing] = useState(false);
-  const [conversationContext, setConversationContext] = useState<string>('');
+
+  const [callContext, setCallContext] = useState<any>({
+    user_profile: {
+      user_id: 'DP_04821',
+      role: 'delivery_partner',
+      speech_ability: 'non_verbal',
+      accessibility_mode: true,
+      preferred_language: 'en-IN',
+      tts_voice: 'male_calm_neutral'
+    },
+    order_context: {
+      order_id: 'ORD-991245',
+      platform: 'QuickEats',
+      delivery_type: 'food',
+      payment_mode: 'prepaid',
+      cash_to_collect: false
+    },
+    environment_context: {
+      noise_level: 'medium',
+      network_quality: 'good',
+      location_accuracy: 'approximate'
+    },
+    trip_status: {
+      delivery_stage: 'en_route',
+      distance_to_destination_meters: 420,
+      eta_minutes: 3,
+      gps_status: 'moving'
+    },
+    customer_context: {
+      customer_name: 'Rohit Sharma',
+      preferred_language: 'en-IN',
+      call_reason_probability: { ask_location: 0.62, ask_eta: 0.21 }
+    },
+    speech_input_analysis: {},
+    response_rules: {
+      max_response_length_words: 10,
+      tone: 'polite_professional',
+      allow_follow_up: false,
+      avoid_questions: true
+    }
+  });
   const [isFirstMessage, setIsFirstMessage] = useState(true);
   const [lastOutgoingMessage, setLastOutgoingMessage] = useState<Message | null>(null);
   
@@ -90,13 +130,30 @@ export default function CallPage() {
       };
       setMessages((prev) => [...prev, newMessage]);
 
-      // Update conversation context
-      setConversationContext((prev) => 
-        prev + `\nCaller: ${transcribedText}`
-      );
+      // Update structured call context (keep as object) and use it for the API call
+      const updatedContext = {
+        ...callContext,
+        speech_input_analysis: {
+          ...(callContext.speech_input_analysis || {}),
+          raw_transcript: transcribedText,
+          confidence: 0.87,
+          language_detected: 'hinglish',
+          background_noise_detected: callContext.speech_input_analysis?.background_noise_detected || false,
+        },
+        // Track last few transcripts for debugging/demo
+        _history: [
+          ...(callContext._history || []),
+          { role: 'caller', text: transcribedText, timestamp: new Date().toISOString() }
+        ].slice(-10)
+      };
 
-      // Process with AI to get reply suggestions
-      const response = await callService.processIntent(transcribedText, conversationContext, isFirstMessage);
+      setCallContext(updatedContext);
+
+      // Debug: log the structured context being sent
+      console.debug('[CALL] Sending context to process-intent:', updatedContext);
+
+      // Process with AI to get reply suggestions (send structured context)
+      const response = await callService.processIntent(transcribedText, updatedContext, isFirstMessage);
       
       setSuggestionState({
         suggestions: response.replies,
@@ -125,7 +182,7 @@ export default function CallPage() {
     } finally {
       setIsProcessing(false);
     }
-  }, [conversationContext, toast, isFirstMessage]);
+  }, [callContext, toast, isFirstMessage]);
 
   const handleSpeechDetected = useCallback(() => {
     console.log('👂 Caller is speaking...');
@@ -248,10 +305,18 @@ export default function CallPage() {
     setMessages(prev => [...prev, newMessage]);
     setLastOutgoingMessage(newMessage);
 
-    // Update conversation context
-    setConversationContext((prev) => 
-      prev + `\nYou: ${text}`
-    );
+    // Update structured call context with outgoing message
+    const updatedContext = {
+      ...callContext,
+      _history: [
+        ...(callContext._history || []),
+        { role: 'you', text, timestamp: new Date().toISOString() }
+      ].slice(-50),
+      // Optionally include latest dynamic responses
+      dynamic_tap_responses: callContext.dynamic_tap_responses || []
+    };
+
+    setCallContext(updatedContext);
 
     try {
       isPlayingResponseRef.current = true;
@@ -306,18 +371,17 @@ export default function CallPage() {
     // Remove the last outgoing message
     setMessages(prev => prev.filter(m => m.id !== lastOutgoingMessage.id));
     
-    // Restore the conversation context (remove the last "You: " entry)
-    setConversationContext(prev => {
-      const lines = prev.split('\n');
-      const lastYouIndex = lines.map((line, idx) => line.startsWith('You:') ? idx : -1)
-        .filter(idx => idx !== -1)
-        .pop();
-      
-      if (lastYouIndex !== undefined) {
-        lines.splice(lastYouIndex, 1);
+    // Remove last outgoing entry from structured call context
+    setCallContext(prev => {
+      const history = (prev._history || []).slice();
+      // remove last 'you' entry
+      for (let i = history.length - 1; i >= 0; i--) {
+        if (history[i].role === 'you') {
+          history.splice(i, 1);
+          break;
+        }
       }
-      
-      return lines.join('\n');
+      return { ...prev, _history: history };
     });
 
     // Get the last incoming message to restore suggestions
@@ -351,8 +415,10 @@ export default function CallPage() {
         description: "Getting new response options",
       });
 
-      // Process with AI again
-      const response = await callService.processIntent(lastIncomingMessage.text, conversationContext, false);
+      // Debug: log the structured context being sent when regenerating
+      console.debug('[CALL] Regenerate - sending context to process-intent:', callContext);
+      // Process with AI again (send structured context)
+      const response = await callService.processIntent(lastIncomingMessage.text, callContext, false);
       
       setSuggestionState({
         suggestions: response.replies,
