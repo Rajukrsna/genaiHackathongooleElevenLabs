@@ -76,8 +76,9 @@ export async function registerRoutes(app: Express) {
   // Speech-to-text endpoint
   app.post("/api/call/speech-to-text", upload.single('audio'), aiController.speechToText);
 
-  // Intent detection and reply generation
-  app.post("/api/call/process-intent", aiController.processIntent);
+  // Intent detection and reply generation (validate conversation context first)
+  const { validateCallContextMiddleware } = await import('./middleware/contextValidator');
+  app.post("/api/call/process-intent", validateCallContextMiddleware(false), aiController.processIntent);
 
   // Text-to-speech endpoint
   app.post("/api/call/text-to-speech", aiController.textToSpeech);

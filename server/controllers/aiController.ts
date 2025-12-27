@@ -236,6 +236,45 @@ export async function processIntent(req: Request, res: Response) {
       return res.status(400).json({ error: 'No text provided' });
     }
 
+    // Validate and sanitize incoming structured context (if any)
+    let validatedContext: any = null;
+    let contextSummary = '';
+
+    if (conversationContext) {
+      try {
+        const { validateCallContext } = await import('../schemas/contextSchema');
+        const parsed = validateCallContext(conversationContext);
+        if (!parsed.success) {
+          console.warn('⚠️ [CONTEXT] Validation failed:', parsed.error.format());
+          // keep validatedContext null — we'll fall back to raw conversationContext if needed
+        } else {
+          validatedContext = parsed.data;
+
+          // Build a short human-readable summary to include in prompts
+          const parts: string[] = [];
+          if (validatedContext.user_profile) {
+            const u = validatedContext.user_profile;
+            parts.push(`User(role=${u.role || 'unknown'}, lang=${u.preferred_language || 'unknown'}, speech_ability=${u.speech_ability || 'unknown'})`);
+          }
+          if (validatedContext.order_context) {
+            const o = validatedContext.order_context;
+            parts.push(`Order(id=${o.order_id || 'unknown'}, platform=${o.platform || 'unknown'}, payment=${o.payment_mode || 'unknown'})`);
+          }
+          if (validatedContext.trip_status) {
+            const t = validatedContext.trip_status;
+            parts.push(`Trip(stage=${t.delivery_stage || 'unknown'}, eta=${t.eta_minutes ?? 'unknown'}m)`);
+          }
+          if (validatedContext.speech_input_analysis && validatedContext.speech_input_analysis.language_detected) {
+            parts.push(`SpeechLang=${validatedContext.speech_input_analysis.language_detected}`);
+          }
+
+          contextSummary = parts.join(' | ');
+        }
+      } catch (schemaErr) {
+        console.warn('⚠️ [CONTEXT] Schema load/validation error:', schemaErr);
+      }
+    }
+
     console.log('🔄 [INTENT] Calling Gemini API for input quality check...');
 
     // Initialize Gemini model
@@ -295,9 +334,9 @@ Only output the JSON object.`;
     }
 
     // Create a prompt with conversation context for better replies
-    const contextPrompt = conversationContext 
-      ? `Previous conversation:\n${conversationContext}\n\n` 
-      : '';
+    const contextPrompt = contextSummary
+      ? `Context summary: ${contextSummary}\n\n`
+      : (conversationContext ? `Previous conversation:\n${conversationContext}\n\n` : '');
 
     const prompt = `You are helping a non-verbal person communicate during a phone call. 
 ${contextPrompt}The caller just said: "${text}"
