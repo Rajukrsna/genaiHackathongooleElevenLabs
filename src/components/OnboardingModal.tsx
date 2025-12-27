@@ -83,7 +83,7 @@ export function OnboardingModal({ isOpen, onComplete }: OnboardingModalProps) {
         <div className="flex-1 overflow-y-auto min-h-0">
           <div className="flex flex-col md:flex-row h-full items-center md:items-start">
             {/* TEXT */}
-            <div className="flex-1 px-6 pt-20 md:pl-10 md:pt-40">
+            <div className="flex-1 px-6 pt-20 md:pl-10 md:pt-40 md:pr-[440px]">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 {slide.title}
               </h2>
@@ -98,19 +98,22 @@ export function OnboardingModal({ isOpen, onComplete }: OnboardingModalProps) {
               )}
             </div>
 
-            {/* IMAGE – TOUCHES BOTTOM */}
-            <div className="flex-1 flex items-end justify-center md:justify-end pr-6 md:pr-10 pb-0">
-              <img
-                src={slide.image}
-                alt={slide.title}
-                className="h-full w-auto sm:w-72 md:w-96 object-contain"
-              />
-            </div>
+            {/* Illustration moved out of scroll area and anchored to modal base */}
+            <div className="hidden md:block w-0" />
           </div>
         </div>
 
+        {/* Absolute illustration (anchored to modal base, visible on md+) */}
+        <div className="hidden md:block absolute right-6 bottom-0 pointer-events-none z-20">
+          <img
+            src={slide.image}
+            alt={slide.title}
+            className="w-auto md:w-[420px] h-auto md:h-[86%] object-contain object-bottom drop-shadow-md"
+          />
+        </div>
+
         {/* FOOTER */}
-        <div className="sticky bottom-0 bg-[#E6E6E6] px-6 py-4">
+        <div className="bg-[#E6E6E6] px-6 py-4 flex-none relative z-10">
           {/* MOBILE */}
           <div className="flex flex-col items-center gap-3 md:hidden">
             <div className="flex gap-2">
