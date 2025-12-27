@@ -1,16 +1,17 @@
 import { Route, Switch } from 'wouter';
-import { ProtectedRoute, OnboardingModal } from './components';
-import { HomePage, DashboardPage, ProfilePage, CallPage } from './pages';
-import { useInitializeApiClient } from './lib/api';
-import { useUserSync } from './hooks';
+import { OnboardingModal } from './components';
+// import { ProtectedRoute } from './components/ProtectedRoute';
+import { CallPage } from './pages';
+// import { useInitializeApiClient } from './lib/api';
+// import { useUserSync } from './hooks';
 import { useState, useEffect } from 'react';
 
 function App() {
   // Initialize API client with Clerk auth token
-  useInitializeApiClient();
+  // useInitializeApiClient();
 
   // Auto-sync user to database when they sign in
-  useUserSync();
+  // useUserSync();
 
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -38,30 +39,12 @@ function App() {
       <Switch>
         {/* Public Route - Now shows CallPage as main page */}
         <Route path="/">
-          <ProtectedRoute>
+          {/* <ProtectedRoute> */}
             <CallPage />
-          </ProtectedRoute>
+          {/* </ProtectedRoute> */}
         </Route>
 
-        {/* Other Routes */}
-        <Route path="/dashboard">
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        </Route>
-
-        <Route path="/profile">
-          <ProtectedRoute>
-            <ProfilePage />
-          </ProtectedRoute>
-        </Route>
-
-        <Route path="/home">
-          <ProtectedRoute>
-            <HomePage />
-          </ProtectedRoute>
-        </Route>
-
+       
         {/* 404 - Not Found */}
         <Route>
           <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">

@@ -1,4 +1,4 @@
-import { useAuth } from '@clerk/clerk-react';
+// import { useAuth } from '@clerk/clerk-react';
 import type { ApiResponse } from '@/types';
 import { API_CONFIG } from './config';
 
@@ -21,7 +21,7 @@ export class ApiErrorClass extends Error {
  */
 class ApiClient {
   private baseURL: string;
-  private getToken: (() => Promise<string | null>) | null = null;
+  // private getToken: (() => Promise<string | null>) | null = null;
 
   constructor() {
     this.baseURL = API_CONFIG.baseURL;
@@ -30,9 +30,9 @@ class ApiClient {
   /**
    * Set the function to retrieve auth token from Clerk
    */
-  setTokenGetter(getter: () => Promise<string | null>) {
-    this.getToken = getter;
-  }
+  // setTokenGetter(getter: () => Promise<string | null>) {
+  //   this.getToken = getter;
+  // }
 
   /**
    * Make an authenticated HTTP request
@@ -43,7 +43,7 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     try {
       // Get auth token from Clerk
-      const token = this.getToken ? await this.getToken() : null;
+      // const token = this.getToken ? await this.getToken() : null;
 
       // Check if body is FormData (don't set Content-Type for FormData)
       const isFormData = options.body instanceof FormData;
@@ -59,10 +59,10 @@ class ApiClient {
       // Add custom headers from options
       Object.assign(headers, options.headers as Record<string, string>);
 
-      // Add auth token if available
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      // // Add auth token if available
+      // if (token) {
+      //   headers['Authorization'] = `Bearer ${token}`;
+      // }
 
       // Make the request
       const response = await fetch(`${this.baseURL}${endpoint}`, {
@@ -168,9 +168,9 @@ export const apiClient = new ApiClient();
  * Hook to initialize API client with Clerk auth
  * Call this at the root of your app
  */
-export function useInitializeApiClient() {
-  const { getToken } = useAuth();
+// export function useInitializeApiClient() {
+//   const { getToken } = useAuth();
   
-  // Set up the token getter with custom JWT template
-  apiClient.setTokenGetter(() => getToken({ template: "neonLab" }));
-}
+//   // Set up the token getter with custom JWT template
+//   apiClient.setTokenGetter(() => getToken({ template: "neonLab" }));
+// }

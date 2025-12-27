@@ -1,9 +1,6 @@
-import { useUser } from '@clerk/clerk-react';
+import { UserCircle } from 'lucide-react';
 
 export function AppBar() {
-  const { user } = useUser();
-  const userInitial = user?.firstName?.charAt(0) || user?.emailAddresses[0]?.emailAddress.charAt(0) || 'U';
-
   return (
     <div className="bg-[#111827] flex h-16 items-center justify-between px-1 py-2 w-full relative">
       {/* Leading icon */}
@@ -27,7 +24,7 @@ export function AppBar() {
       {/* Trailing avatar */}
       <div className="flex items-center justify-between w-12 h-12">
         <div className="bg-[#3b82f6] rounded-full w-8 h-8 flex items-center justify-center relative">
-          <span className="text-white text-base font-medium">{userInitial.toUpperCase()}</span>
+          <UserCircle className="w-5 h-5 text-white" />
         </div>
       </div>
     </div>
