@@ -447,20 +447,15 @@ export default function CallPage() {
         {/* Detecting Intent Card */}
         {isProcessing && (
           <div
-            className="w-full flex items-center justify-start"
+            className="w-full flex items-center justify-start max-w-full sm:max-w-[391px] bg-[#1f2937] text-[#9CA3AF] rounded-[13px] px-4 py-3"
             style={{
               fontFamily: 'Segoe UI',
               fontWeight: 400,
               fontSize: '16px',
               lineHeight: '100%',
               letterSpacing: '0%',
-              width: '391px',
               height: '57px',
-              borderRadius: '13px',
-              gap: '8px',
-              padding: '12px 16px',
-              background: '#1f2937',
-              color: '#9CA3AF'
+              gap: '8px'
             }}
           >
             Detecting intent...

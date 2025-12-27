@@ -15,10 +15,10 @@ interface IncomingCardProps {
 export function IncomingCard({ message, isLatest = true }: IncomingCardProps) {
   return (
     <div className="bg-[#111827] flex items-center justify-start px-4 py-3 rounded-[13px] w-full">
-      <p className={`text-left whitespace-pre-wrap ${
+      <p className={`text-left whitespace-pre-wrap break-words min-w-0 max-w-[90%] sm:max-w-[70%] ${
         isLatest 
-          ? 'text-[#e5e7eb] text-2xl' 
-          : 'text-[#9ca3af] text-lg'
+          ? 'text-[#e5e7eb] text-base sm:text-2xl' 
+          : 'text-[#9ca3af] text-sm sm:text-lg'
       }`}>
         {message}
       </p>
@@ -35,11 +35,11 @@ interface OutgoingCardProps {
 
 export function OutgoingCard({ message, isLatest = true, canUndo = false, onUndo }: OutgoingCardProps) {
   return (
-    <div className="bg-[#111827] flex flex-col gap-1.5 items-end px-4 py-3 rounded-[13px] w-full">
-      <p className={`text-right whitespace-pre-wrap w-full ${
+    <div className="bg-[#111827] flex flex-col gap-1.5 items-end px-4 py-3 rounded-[13px] w-full max-w-[90%] sm:max-w-[70%] ml-auto">
+      <p className={`text-right whitespace-pre-wrap break-words min-w-0 ${
         isLatest 
-          ? 'text-white text-lg' 
-          : 'text-[#9ca3af] text-lg'
+          ? 'text-white text-base sm:text-lg' 
+          : 'text-[#9ca3af] text-sm'
       }`}>
         {message}
       </p>
