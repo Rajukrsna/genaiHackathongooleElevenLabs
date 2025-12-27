@@ -1,8 +1,9 @@
 import { Route, Switch } from 'wouter';
-import { ProtectedRoute } from './components';
+import { ProtectedRoute, OnboardingModal } from './components';
 import { HomePage, DashboardPage, ProfilePage, CallPage } from './pages';
 import { useInitializeApiClient } from './lib/api';
 import { useUserSync } from './hooks';
+import { useState, useEffect } from 'react';
 
 function App() {
   // Initialize API client with Clerk auth token
@@ -11,8 +12,29 @@ function App() {
   // Auto-sync user to database when they sign in
   useUserSync();
 
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    // Check if user has completed onboarding
+    const hasCompletedOnboarding = localStorage.getItem('onboardingCompleted');
+    if (!hasCompletedOnboarding) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    // localStorage.setItem('onboardingCompleted', 'true');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onComplete={handleOnboardingComplete}
+      />
+
       <Switch>
         {/* Public Route - Now shows CallPage as main page */}
         <Route path="/">

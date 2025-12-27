@@ -1,4 +1,5 @@
 export { default as ProtectedRoute } from './ProtectedRoute';
+export { OnboardingModal } from './OnboardingModal';
 
 // UI Components
 export { Button } from './ui/button';
