@@ -1,4 +1,5 @@
 import { Phone, PhoneOff, Volume2, VolumeX } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 interface CallerIDProps {
   callerName?: string;
@@ -19,6 +20,27 @@ export function CallerID({
   onToggleMute,
   isMuted = false
 }: CallerIDProps) {
+  const [callDuration, setCallDuration] = useState(0);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (status === 'active') {
+      interval = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+      setCallDuration(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [status]);
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
   return (
     <div className="bg-[#302e2f] flex gap-1 h-[77px] items-center justify-center px-6 py-[18px] rounded-2xl w-full">
       {/* Caller Information */}
@@ -32,7 +54,9 @@ export function CallerID({
           </div>
         </div>
         <div className="flex flex-col justify-center w-full">
-          <p className="text-sm leading-5">{status === 'incoming' ? 'Incoming call' : 'Call active'}</p>
+          <p className="text-sm leading-5">
+            {status === 'incoming' ? 'Incoming call' : `Ongoing call ${formatDuration(callDuration)}`}
+          </p>
         </div>
       </div>
 

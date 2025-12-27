@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import Onboarding1 from '../assets/Onboarding1.png';
+import Onboarding2 from '../assets/Onboarding2.png';
+import Onboarding3 from '../assets/Onboarding3.png';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -10,19 +13,19 @@ const slides = [
     title: "When you can't speak, simple calls become barriers",
     description:
       "Everyday conversations assume everyone can speak.\nThis app removes that barrier.",
-    image: "/src/assets/Onboarding1.png",
+    image: Onboarding1,
   },
   {
     title: "Conversations, made accessible",
     description:
       "Incoming speech is understood by AI, converted into simple tap options, and spoken aloud for you.",
-    image: "/src/assets/Onboarding2.png",
+    image: Onboarding2,
   },
   {
     title: "Designed for delivery calls",
     description:
       "A real-world delivery scenario showing how spoken conversations can work without voice.",
-    image: "/src/assets/onboarding3.png",
+    image: Onboarding3,
   },
 ];
 
