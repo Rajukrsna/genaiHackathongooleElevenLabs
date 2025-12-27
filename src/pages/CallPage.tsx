@@ -378,7 +378,7 @@ export default function CallPage() {
   };
 
   return (
-    <div className="bg-[#0b1220] min-h-screen w-full flex flex-col relative max-w-md mx-auto">
+    <div className="bg-[#0b1220] min-h-[100svh] w-full flex flex-col relative mx-auto max-w-[420px] sm:max-w-md md:max-w-md">
       {/* Fixed Top Navigation */}
       <div className="sticky top-0 z-20 bg-[#0b1220]">
         {/* Caller ID */}
