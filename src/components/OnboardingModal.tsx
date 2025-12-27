@@ -99,6 +99,15 @@ export function OnboardingModal({ isOpen, onComplete }: OnboardingModalProps) {
             </div>
 
             {/* Illustration moved out of scroll area and anchored to modal base */}
+            {/* Mobile: show illustration inside scroll area so it doesn't disappear */}
+            <div className="md:hidden flex justify-center mt-6 px-4">
+              <img
+                src={slide.image}
+                alt={slide.title}
+                className="w-[280px] max-w-full h-auto rounded-lg drop-shadow-md"
+              />
+            </div>
+
             <div className="hidden md:block w-0" />
           </div>
         </div>

@@ -56,17 +56,11 @@
   ],
   "screenshots": [
     {
-      "src": "screenshots/screenshot-wide.png",
+      "src": "screenshot1.png",
       "sizes": "1280x720",
       "type": "image/png",
       "label": "Wide screenshot",
       "form_factor": "wide"
-    },
-    {
-      "src": "screenshots/screenshot-mobile.png",
-      "sizes": "360x800",
-      "type": "image/png",
-      "label": "Mobile screenshot"
     }
   ],
   "start_url": "/",
