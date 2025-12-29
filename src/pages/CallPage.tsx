@@ -199,7 +199,7 @@ export default function CallPage() {
 
   const handleAcceptCall = async () => {
     setCallStatus('active');
-    
+
     // Add intro message when call starts
     const introMsg: Message = {
       id: 'intro-' + Date.now(),
@@ -208,34 +208,85 @@ export default function CallPage() {
       timestamp: new Date(),
     };
     setMessages([introMsg]);
-    
-    // Speak the intro message
+
+    // Try to start listening immediately (tied to user gesture) so permission prompt is shown now
+    try {
+      await startListening();
+    } catch (err) {
+      console.warn('startListening failed (permission?):', err);
+      // Try a direct getUserMedia as a fallback to trigger permission prompt
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(t => t.stop());
+        // Try starting listening again
+        await startListening();
+      } catch (err2) {
+        console.error('Microphone permission denied or not available:', err2);
+        toast({
+          title: 'Mic permission needed',
+          description: 'Please allow microphone access in your browser or PWA',
+          variant: 'destructive',
+        });
+        // Revert to incoming state so user can retry
+        setCallStatus('incoming');
+        return;
+      }
+    }
+
+    // Speak the intro message but keep detection paused so we don't capture our own playback
     try {
       isPlayingResponseRef.current = true;
       pauseDetection(); // Pause VAD while playing response
 
+      // Prime audio to improve playback reliability in PWAs (user gesture unlock)
+      try {
+        const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          if (ctx.state === 'suspended') await ctx.resume();
+          const buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+          const source = ctx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(ctx.destination);
+          source.start(0);
+        }
+      } catch (e) {
+        console.debug('Audio priming failed:', e);
+      }
+
       // Convert text to speech
       const audioDataUrl = await callService.textToSpeech(introMsg.text);
-      
+
       // Play the audio
       if (audioRef.current) {
         audioRef.current.src = audioDataUrl;
-        await audioRef.current.play();
-        
+        await audioRef.current.play().catch((err) => {
+          console.error('Audio play failed:', err);
+          toast({
+            title: 'Audio playback blocked',
+            description: 'Unable to play intro audio. Interact with the app to enable audio playback.',
+            variant: 'destructive',
+          });
+        });
+
         toast({
           title: "Intro message sent",
           description: "Playing the intro message to the caller",
         });
 
-        // Wait for audio to finish
+        // Wait for audio to finish (with a fallback timeout in case onended doesn't fire)
         await new Promise<void>((resolve) => {
+          let resolved = false;
+          const done = () => { if (!resolved) { resolved = true; resolve(); } };
           if (audioRef.current) {
-            audioRef.current.onended = () => resolve();
+            audioRef.current.onended = () => done();
+            // Fallback timeout (4s)
+            setTimeout(() => done(), 4000);
           } else {
-            resolve();
+            done();
           }
         });
-        
+
         // Add a small delay after audio ends to avoid picking up tail end
         await new Promise(resolve => setTimeout(resolve, 500));
       }
@@ -250,10 +301,8 @@ export default function CallPage() {
       isPlayingResponseRef.current = false;
       resumeDetection(); // Resume VAD after response is done
     }
-    
-    // Auto-start continuous listening
-    await startListening();
-    
+
+    // Do NOT call startListening() again here - we already started listening above
     toast({
       title: 'Call connected',
       description: 'Listening for caller speech automatically',
