@@ -81,11 +81,100 @@ export default function CallPage() {
   });
   const [isFirstMessage, setIsFirstMessage] = useState(true);
   const [lastOutgoingMessage, setLastOutgoingMessage] = useState<Message | null>(null);
-  
+
+  // Debug / PWA workaround states
+  const [micPermissionGranted, setMicPermissionGranted] = useState<boolean | null>(null);
+  const [audioPlaybackAllowed, setAudioPlaybackAllowed] = useState<boolean | null>(null);
+  const [showEnableAudioPrompt, setShowEnableAudioPrompt] = useState(false);
+  const [isPWA, setIsPWA] = useState(false);
+
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isPlayingResponseRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Detect if running as a PWA / standalone
+  useEffect(() => {
+    try {
+      const pwa = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (window as any).navigator?.standalone;
+      setIsPWA(Boolean(pwa));
+      if (pwa) console.debug('[CALL] Running in PWA/standalone mode');
+    } catch (e) {
+      console.debug('[CALL] PWA detection failed', e);
+    }
+  }, []);
+
+  // Attempt to enable microphone & unlock audio on a user gesture
+  const attemptEnableAudioAndMic = useCallback(async (opts: {showToast?: boolean} = {showToast: true}) => {
+    console.debug('[CALL] attemptEnableAudioAndMic - start');
+
+    // Microphone
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // stop tracks immediately - we just wanted permission
+      stream.getTracks().forEach(t => t.stop());
+      setMicPermissionGranted(true);
+      console.debug('[CALL] Microphone permission granted');
+      if (opts.showToast) toast({ title: 'Microphone access granted', description: 'Microphone access is enabled.' });
+    } catch (err) {
+      setMicPermissionGranted(false);
+      console.warn('[CALL] Microphone permission denied', err);
+      setShowEnableAudioPrompt(true);
+      if (opts.showToast) toast({ title: 'Mic permission needed', description: 'Please allow microphone access in your browser or PWA', variant: 'destructive' });
+      return false;
+    }
+
+    // Try to prime audio (resume AudioContext) to allow playback in PWAs
+    try {
+      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') {
+          await ctx.resume();
+        }
+        // small silent buffer
+        try {
+          const buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+          const source = ctx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(ctx.destination);
+          source.start(0);
+        } catch (err) {
+          console.debug('[CALL] Audio priming (buffer) failed', err);
+        }
+      }
+
+      // Try to play any existing audio element source (if set) to test playback
+      if (audioRef.current) {
+        try {
+          // If there is no src, this may still throw; ignore if so
+          await audioRef.current.play();
+          audioRef.current.pause();
+          setAudioPlaybackAllowed(true);
+          setShowEnableAudioPrompt(false);
+          if (opts.showToast) toast({ title: 'Audio enabled', description: 'Audio playback should work now.' });
+          console.debug('[CALL] Audio playback allowed');
+        } catch (err) {
+          setAudioPlaybackAllowed(false);
+          setShowEnableAudioPrompt(true);
+          console.warn('[CALL] Audio playback failed', err);
+          if (opts.showToast) toast({ title: 'Audio blocked', description: 'Tap the button to enable audio & mic', variant: 'destructive' });
+          return false;
+        }
+      } else {
+        // No audio element exists yet, still consider audio as likely ok
+        setAudioPlaybackAllowed(null);
+      }
+
+      return true;
+    } catch (err) {
+      console.warn('[CALL] attemptEnableAudioAndMic encountered an error', err);
+      setShowEnableAudioPrompt(true);
+      if (opts.showToast) toast({ title: 'Audio enable failed', description: 'Please interact with the app to enable audio playback', variant: 'destructive' });
+      return false;
+    }
+  }, [audioRef, toast]);
+
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -209,28 +298,31 @@ export default function CallPage() {
     };
     setMessages([introMsg]);
 
-    // Try to start listening immediately (tied to user gesture) so permission prompt is shown now
+    // Try to enable mic & audio (user gesture) and start listening
     try {
-      await startListening();
-    } catch (err) {
-      console.warn('startListening failed (permission?):', err);
-      // Try a direct getUserMedia as a fallback to trigger permission prompt
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(t => t.stop());
-        // Try starting listening again
-        await startListening();
-      } catch (err2) {
-        console.error('Microphone permission denied or not available:', err2);
-        toast({
-          title: 'Mic permission needed',
-          description: 'Please allow microphone access in your browser or PWA',
-          variant: 'destructive',
-        });
-        // Revert to incoming state so user can retry
+      const ok = await attemptEnableAudioAndMic();
+      if (!ok) {
+        // User denied or audio blocked; revert and show prompt
         setCallStatus('incoming');
         return;
       }
+
+      // Start the continuous recorder now that permission was granted
+      try {
+        await startListening();
+        setMicPermissionGranted(true);
+        setShowEnableAudioPrompt(false);
+        console.debug('[CALL] startListening started after permission');
+      } catch (startErr) {
+        console.warn('[CALL] startListening failed after permission:', startErr);
+        // still allow call flow to continue but show prompt
+        setShowEnableAudioPrompt(true);
+      }
+    } catch (err) {
+      console.error('[CALL] Error during enable mic/audio:', err);
+      toast({ title: 'Error', description: 'Failed to enable mic/audio', variant: 'destructive' });
+      setCallStatus('incoming');
+      return;
     }
 
     // Speak the intro message but keep detection paused so we don't capture our own playback
@@ -511,6 +603,28 @@ export default function CallPage() {
         <div className="flex flex-col items-start w-full">
           <AppBar />
           <ListeningIndicator isListening={!isPaused && callStatus !== 'ended'} />
+
+          {/* Prompt to enable audio & mic in PWAs or when blocked */}
+          {showEnableAudioPrompt && (
+            <div className="w-full px-4 py-3 bg-yellow-500 text-black rounded-md my-2 flex flex-col items-center gap-2">
+              <div className="text-sm font-medium">Audio / Microphone not enabled</div>
+              <div className="text-xs">Tap the button below to enable audio playback and microphone access.</div>
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={() => attemptEnableAudioAndMic()}
+                  className="px-3 py-1 bg-white rounded text-sm"
+                >
+                  Enable audio & mic
+                </button>
+                <button
+                  onClick={() => setShowEnableAudioPrompt(false)}
+                  className="px-3 py-1 border rounded text-sm"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
           
           {/* Voice Activity Status */}
           {isActive && isSpeaking && (
