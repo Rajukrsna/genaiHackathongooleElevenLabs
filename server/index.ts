@@ -10,7 +10,9 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173', // Local development
   'http://localhost:3000', // Alternative port
-  'https://genai-hackathongoole-eleven-labs.vercel.app', // Production frontend
+  'https://genai-hackathongoole-eleven-labs.vercel.app',
+  'https://genai-hackathongoogle-eleven-labs.vercel.app'
+  , // Production frontend
 ];
 
 app.use(cors({

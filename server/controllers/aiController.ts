@@ -172,7 +172,7 @@ export async function speechToText(req: Request, res: Response) {
 
     const transcription = await elevenLabs.speechToText.convert({
       file: audioBlob,
-      modelId: 'scribe_v1',
+      modelId: 'scribe_v1', 
       languageCode: 'eng',
     });
 
